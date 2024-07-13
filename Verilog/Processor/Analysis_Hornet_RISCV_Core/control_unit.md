@@ -5,6 +5,7 @@
 * These signal are saved in IDEX_preg_ex to assign to corresponding outputs in EX.
 
 |CU_output|ctrl_signal_in_EX|
+| :—————— | :—————————————— |
 |ALU_func|alu_func|
 |CSR_ALU_func|csr_alu_func|
 |EX_mux1|mux1_ctrl_EX|
