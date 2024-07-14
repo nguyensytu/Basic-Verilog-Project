@@ -8,6 +8,11 @@
 | CU_output | op_div | op_mul | muldiv_sel | muldiv_start | B | J | EX_mux8 | EX_mux7 | EX_mux6 | EX_mux5 | EX_mux3 | EX_mux1 | CSR_ALU_func | ALU_func | 
 | ctrl_signal_in_EX | op_div | op_mul | muldiv_sel | muldiv_start | B | J | mux8_ctrl_EX | mux7_ctrl_EX | mux6_ctrl_EX | mux5_ctrl_EX | mux3_ctrl_EX | mux1_ctrl_EX | csr_alu_func | alu_func |
 
+| Bit | 20:19 | 18:17 | 16 | 15 | 14 | 13 | 12 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| CU_output | op_div | op_mul | muldiv_sel | muldiv_start | B | J | EX_mux8 |
+| ctrl_signal_in_EX | op_div | op_mul | muldiv_sel | muldiv_start | B | J | mux8_ctrl_EX |
+
 | ALU_func    | alu_func         |
 | :--- | :--- |
 |ALU_func    |alu_func           |
