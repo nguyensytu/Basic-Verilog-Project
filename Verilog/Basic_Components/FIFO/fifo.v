@@ -16,7 +16,12 @@ module fifo #(
     wire wr_en;
     // body
     // register file write operation
-    always @(posedge clk) begin
+    integer i;
+    always @(posedge clk, posedge reset) begin
+        if(reset) begin
+            for(i = 0; i < 2**W; i = i + 1)
+                array_reg[i] <= 0;
+        end
         if (wr_en)
         array_reg[w_ptr_reg] <= w_data;
     end

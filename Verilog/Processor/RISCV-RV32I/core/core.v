@@ -36,6 +36,7 @@ module core (
 // Signal declaration
     // csr
     wire [31:0] csr_reg_o, irq_addr, mepc;
+    wire if_flush, id_flush, ex_flush, mem_flush;
     wire csr_state;
     // hazard signal declaration
     wire hazard_stall;
@@ -166,7 +167,7 @@ module core (
             ifid_pc <= 32'h0;
         end
         else if (id_stall) begin
-            ifid_inst <= ifid_inst; // nop instruction addi x0,x0,0
+            ifid_inst <= ifid_inst; 
             ifid_pc <= ifid_pc;                
         end
         else begin

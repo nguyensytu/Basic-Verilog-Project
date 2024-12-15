@@ -4,10 +4,10 @@
 * 000aaaaa : load addr -> A  
 * 001aaaaa : load addr -> B 
 * 010aaaaa : store A -> addr
-* 011xxxxx :
+* 011xxxxx : store imm
 * 100aaaaa : jmp addr -> pc // jump anyway   
 * 101aaaaa : jmpz addr -> pc // jump if zero flag = 1
-* 110xxxxx :         
+* 110xxxxx : return        
 * 111ooooo : alu A, B -> A // add, sub, and, or
 ### 
 * "x" is don't care bit, "a" is mem address bit, "o" is alu opcode bit 

@@ -1,16 +1,25 @@
 module registers (
-    input clk, wr_A, wr_B, rd_mem,
+    input clk, reset,
+    input load_A, load_B, wb_A, data_valid,
     input [7:0] data_write, result,
     output reg [7:0] A, B 
 ); 
-    always @(posedge clk) begin
-        if (wr_A) begin
-            if (rd_mem)
+    always @(posedge clk, posedge reset) begin
+        if (reset)
+            A <= 8'b0;
+        else if (load_A & data_valid) 
                 A <= data_write;
-            else
+        else if (wb_A)
                 A <= result;
-        end
-        if (wr_B)
+        else    
+            A <= A;
+    end
+    always @(posedge clk, posedge reset) begin
+        if (reset)
+            B <= 8'b0;
+        else if (load_B && data_valid)
             B <= data_write;
+        else 
+            B <= B; 
     end
 endmodule
