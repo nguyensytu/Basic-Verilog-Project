@@ -44,7 +44,6 @@ module AHB_bridge (
     wire p_sel;
     reg h_enable;
     //
-    wire [6:0] ref_addr;
     wire slave_error, burst_err, size_err, p_slverr;
     always @(posedge h_clk, negedge h_resetn) begin
         if(!h_resetn) begin
@@ -114,9 +113,7 @@ module AHB_bridge (
         h_clk, h_resetn, h_trans, reg_trans, p_sel, 1'b0, slave_error, h_resp
     );
 //
-    assign ref_addr =   strb[3] ? {1'b0,reg_addr[5:0]} + 2'b11 :
-                        strb[2] ? {1'b0,reg_addr[5:0]} + 2'b10 :
-                        strb[1] ? {1'b0,reg_addr[5:0]} + 2'b01 : {1'b0,reg_addr[5:0]};
-    assign offset = reg_addr[5:0];
-    assign p_slverr = ref_addr[6];
+    addr_strb_decoder #(.NumWords(64)) addr_strb_decoder (
+        reg_addr, strb, offset, p_slverr
+    );
 endmodule

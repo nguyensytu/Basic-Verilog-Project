@@ -15,7 +15,7 @@ module apb_slave_tb;
     APB_slave_32bit #(.NumWords(64)) device0 (
         p_clk, p_resetn, p_addr, p_sel[0], p_enable[0], p_write, p_wdata, p_strb, p_rdata[0], p_ready[0], p_slverr[0]
     );
-    APB_slave_8bit #(.DeviceWords(64)) device1 (
+    APB_slave_8bit #(.NumWords(64)) device1 (
         p_clk, p_resetn, p_addr, p_sel[1], p_enable[1], p_write, p_wdata, p_strb, p_rdata[1], p_ready[1], p_slverr[1]
     );
 

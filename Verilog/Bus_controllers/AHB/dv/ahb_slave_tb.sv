@@ -32,18 +32,20 @@ module ahb_slave_tb;
         ahb_init();
         #20 h_resetn = 1;
         #10 @(posedge h_clk);
-        ahb_write_nonseq(26'b1, $random, 3'b0, 3'b010, 4'b1111);
-        ahb_write_nonseq(26'b1, $random, 3'b0, 3'b110, 4'b1111); // size error
-        ahb_write_nonseq(26'b1, $random, 3'b0, 3'b010, 4'b1111);
-        ahb_write_nonseq(26'b1, 6'h3f, 3'b0, 3'b010, 4'b1111); // slave error
-        ahb_write_nonseq(26'b1, 6'h30, 3'b0, 3'b010, 4'b1111);
-        ahb_write_nonseq(26'b11, $random, 3'b0, 3'b010, 4'b1111);
+        ahb_write_nonseq(26'b10, $random, 3'b0, 3'b010, 4'b1111);
+        ahb_write_nonseq(26'b10, $random, 3'b0, 3'b110, 4'b1111); // size error
+        ahb_write_nonseq(26'b10, $random, 3'b0, 3'b010, 4'b1111);
+        ahb_write_nonseq(26'b10, 6'h3f, 3'b0, 3'b010, 4'b1111); // slave error
+        ahb_write_nonseq(26'b10, 6'h30, 3'b0, 3'b010, 4'b1111);
+        ahb_write_nonseq(26'b10, 6'h30, 3'b1, 3'b010, 4'b1111); // burst error nonseq
+        ahb_write_nonseq(26'b10, 6'h30, 3'b0, 3'b010, 4'b1111);
+        ahb_write_nonseq(26'b11, $random, 3'b0, 3'b010, 4'b1111); // decode error
         ahb_busy();
         ahb_idle();
-        ahb_write_seq(26'b1, 6'h10, 3'b01, 3'b010, 4'b1111);
+        ahb_write_seq(26'b10, 6'h10, 3'b01, 3'b010, 4'b1111);
         ahb_busy();
-        ahb_write_seq(26'b1, 6'h14, 3'b01, 3'b010, 4'b1111);
-        ahb_write_seq(26'b1, 6'h16, 3'b01, 3'b010, 4'b1111);
+        ahb_write_seq(26'b10, 6'h14, 3'b01, 3'b010, 4'b1111);
+        ahb_write_seq(26'b10, 6'h16, 3'b01, 3'b010, 4'b1111); // burst error seq 
         ahb_idle();
     end
 //    initial begin

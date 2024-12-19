@@ -93,7 +93,7 @@ module AHB_APB_bidge (
     p_enable_decoder p_enable_decoder (
         h_clk, h_resetn, h_trans, reg_trans, p_sel, p_slverr, slave_error, h_ready, p_enable
     );
-    p_strb_decoder p_strb_decoder (
+    strb_decoder strb_decoder (
         reg_wstrb, reg_size, p_strb, size_err
     );
     burst_err_decode burst_err_decode (

@@ -41,8 +41,7 @@ module AHB_slave (
 //  
     reg [25:0] base_addr [2:0];
     reg h_enable; 
-    wire [6:0] ref_addr;
-    wire slave_error, decode_error, burst_err, size_err;
+    wire slave_error, decode_error, burst_err, size_err, strb_addr_error;
     wire h_readyout;
 //
     reg [31:0] reg_addr;
@@ -85,7 +84,7 @@ module AHB_slave (
         base_addr[2] <= 26'b10;
     end
 //
-    APB_slave_8bit #(.DeviceWords(64), .AddrBits(32)) device0 (
+    APB_slave_8bit #(.NumWords(64), .AddrBits(32)) device0 (
         h_clk, h_resetn, reg_addr, p_sel[0], p_enable[0], reg_write, h_wdata, p_strb, p_rdata[0], p_ready[0], p_slverr[0]
     );
     APB_slave_32bit #(.NumWords(64)) device1 (
@@ -137,7 +136,7 @@ module AHB_slave (
     end
     assign w_en = p_sel[2] & h_enable & reg_write & !slave_error;
 // 
-    p_strb_decoder p_strb_decoder (
+    strb_decoder strb_decoder (
         reg_wstrb, reg_size, p_strb, size_err
     );
     burst_err_decode burst_err_decode (
@@ -148,16 +147,15 @@ module AHB_slave (
         h_clk, h_resetn, h_trans, reg_trans, 1'b1, p_resp, slave_error, h_resp
     );
 //
-    assign ref_addr =   p_strb[3] ? {1'b0,reg_addr[5:0]} + 2'b11 :
-                        p_strb[2] ? {1'b0,reg_addr[5:0]} + 2'b10 :
-                        p_strb[1] ? {1'b0,reg_addr[5:0]} + 2'b01 : {1'b0,reg_addr[5:0]};
-    assign offset = reg_addr[5:0];
+    addr_strb_decoder #(.NumWords(64)) addr_strb_decoder (
+        reg_addr, p_strb, offset, strb_addr_error
+    );
 //
-    assign p_resp = p_slverr[0] | p_slverr[1] | burst_err;
-    assign slave_error = decode_error | size_err | (p_sel[2] & ref_addr[6]);
+    assign p_resp = p_slverr[0] | p_slverr[1];
+    assign slave_error = decode_error | size_err | burst_err | (p_sel[2] & strb_addr_error);
     assign h_rdata = p_sel[2] ? p_rdata[2] : 
                      p_sel[1] ? p_rdata[1] : 
                      p_rdata[0]; 
     assign h_readyout = (p_ready[0] & !p_slverr[0]) | (p_ready[1] & !p_slverr[1]) | w_en;
-    assign h_ready = (reg_trans == idle)| (h_readyout & !burst_err) ;
+    assign h_ready = (reg_trans == idle)| h_readyout ;
 endmodule

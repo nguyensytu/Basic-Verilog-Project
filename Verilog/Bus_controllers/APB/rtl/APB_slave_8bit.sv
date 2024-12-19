@@ -1,5 +1,5 @@
 module APB_slave_8bit #(
-    parameter int DeviceWords = 64,
+    parameter int NumWords = 64,
                   AddrBits = 32
 )( 
     input p_clk, 
@@ -17,19 +17,17 @@ module APB_slave_8bit #(
 
     wire w_en;
     reg [3:0] strb;
-    wire [$clog2(DeviceWords):0] ref_addr;
-    //reg [AddrBits-1:0] base_addr;
-    wire [$clog2(DeviceWords)-1:0] offset;
+    wire [$clog2(NumWords)-1:0] offset;
     wire [7:0] data_in, data_out;
     reg [31:0] rdata_reg;
-    register_file_8bit #(.NumWords(DeviceWords)) device0 (
+    wire strb_addr_error;
+    register_file_8bit #(.NumWords(NumWords)) device0 (
         p_clk, p_resetn, w_en, offset, data_in, data_out
     );
     assign w_en = p_sel & p_write & p_enable & (strb != 4'b0000) & !p_slverr;
-    assign ref_addr =   strb[3] ? {1'b0,p_addr[$clog2(DeviceWords)-1:0]} + 2'b11 :
-                        strb[2] ? {1'b0,p_addr[$clog2(DeviceWords)-1:0]} + 2'b10 :
-                        strb[1] ? {1'b0,p_addr[$clog2(DeviceWords)-1:0]} + 2'b01 : {1'b0,p_addr[$clog2(DeviceWords)-1:0]};
-    assign offset = ref_addr[$clog2(DeviceWords)-1:0];
+    addr_strb_decoder #(.NumWords(NumWords)) addr_strb_decoder (
+        p_addr, strb, offset, strb_addr_error
+    );
     assign data_in = strb[3] ? p_wdata[31:24] :
                      strb[2] ? p_wdata[23:16] : 
                      strb[1] ? p_wdata[15:8] : p_wdata[7:0];
@@ -65,5 +63,5 @@ module APB_slave_8bit #(
         end
     end
     assign p_ready = p_sel & (p_slverr | (p_enable & (strb==4'b0001 | strb==4'b0010 | strb==4'b0100 | strb==4'b1000 | strb==4'b0000)));
-    assign p_slverr = p_enable & ref_addr[$clog2(DeviceWords)];
+    assign p_slverr = p_enable & strb_addr_error;
 endmodule

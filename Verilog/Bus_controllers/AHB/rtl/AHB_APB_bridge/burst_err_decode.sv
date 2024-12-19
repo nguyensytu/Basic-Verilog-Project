@@ -14,7 +14,7 @@ module burst_err_decode (
     reg [31:0] base_addr;
     wire [31:0] pre_addr;
     wire [7:0] size;
-    reg burst_err_next;
+    // reg burst_err_next;
     // base_addr
     always @(posedge h_clk, negedge h_resetn) begin
         if(!h_resetn) base_addr <= 32'b0;
@@ -39,56 +39,19 @@ module burst_err_decode (
                         (reg_size == 3'b010 & reg_burst == 3'b010 & base_addr[4] != reg_addr[4]) ? reg_addr - 7'b0010000 :
                         (reg_size == 3'b010 & reg_burst == 3'b100 & base_addr[5] != reg_addr[5]) ? reg_addr - 7'b0100000 :
                         (reg_size == 3'b010 & reg_burst == 3'b110 & base_addr[6] != reg_addr[6]) ? reg_addr - 7'b1000000 : reg_addr + size;
-    // always @(*) begin
-    //     if(reg_size == 3'b000) begin
-    //         if(reg_burst == 3'b010 && (base_addr[2] != reg_addr[2]))
-    //             pre_addr = base_addr - 5'b00100;
-    //         else if(reg_burst == 3'b100 && (base_addr[3] != reg_addr[3]))
-    //             pre_addr = base_addr - 5'b01000;
-    //         else if(reg_burst == 3'b110 && (base_addr[4] != reg_addr[4]))
-    //             pre_addr = base_addr - 5'b10000;
-    //     end
-    //     else if(reg_size == 3'b001) begin
-    //         if(reg_burst == 3'b010 && (base_addr[3] != reg_addr[3]))
-    //             pre_addr = base_addr - 6'b001000;
-    //         else if(reg_burst == 3'b100 && (base_addr[4] != reg_addr[4]))
-    //             pre_addr = base_addr - 6'b010000;
-    //         else if(reg_burst == 3'b110 && (base_addr[5] != reg_addr[5]))
-    //             pre_addr = base_addr - 6'b100000;
-    //     end
-    //     else if(reg_size == 3'b010) begin
-    //         if(reg_burst == 3'b010 && (base_addr[4] != reg_addr[4]))
-    //             pre_addr = base_addr - 7'b0010000;
-    //         else if(reg_burst == 3'b100 && (base_addr[5] != reg_addr[5]))
-    //             pre_addr = base_addr - 7'b0100000;
-    //         else if(reg_burst == 3'b110 && (base_addr[6] != reg_addr[6]))
-    //             pre_addr = base_addr - 7'b1000000;
-    //     end
-    //     else
-    //         pre_addr = base_addr;
-    // end
-    //  
-    always @(posedge h_clk, negedge h_resetn) begin
-        if(!h_resetn) begin
-            burst_err <= 1'b0;
-        end
-        else begin
-            if(h_trans == nonseq && h_burst != 3'b0)
-                burst_err <= 1;
-            else
-                burst_err <= burst_err_next;
-        end
-    end
     always @(*) begin
-        burst_err_next = 1'b0;
+        burst_err = 1'b0;
         case (reg_trans)
             // idle:
             // busy:
-            // nonseq:
+            nonseq:begin
+                if(reg_burst != 3'b0)
+                    burst_err <= 1'b1;
+            end
             seq: begin
                 if(h_trans == seq) begin
                     if((h_addr != pre_addr) || (h_size != reg_size) || (h_burst != reg_burst)) begin
-                        burst_err_next = 1'b1;
+                        burst_err = 1'b1;
                     end
                 end
             end

@@ -45,20 +45,23 @@ task axi_w (logic[3:0] id, logic[3:0] strb, logic last, logic valid);
     w_valid = 1'b0;
 endtask
 task axi_b ();
-    b_ready = 1'b1;
+    axi_wait_ready(b_valid);
+    $display("[%0t] b_id = %8h, b_resp = %8h", $time, b_id, b_resp);
 endtask
-task axi_ar (logic[3:0] len, logic[2:0] size, logic[1:0] burst, logic valid);
-    ar_id = $random;
-    ar_addr = $random;
+task axi_ar (logic[3:0] id, logic[25:0] upper_addr, logic[3:0] len, logic[2:0] size, logic[1:0] burst, logic valid);
+    ar_id = id;
+    ar_addr[31:6] = upper_addr; 
+    ar_addr[5:0] = $random;
     ar_len = len;
     ar_size = size;
     ar_burst = burst;
     ar_valid = valid;
     axi_wait_ready(ar_ready);
+    ar_valid = 1'b0;
 endtask
 task axi_r ();
-    r_ready = 1'b1;
-    axi_wait_ready(r_ready);
+    axi_wait_ready(r_valid);
+    $display("[%0t] r_id = %8h, r_resp = %8h, r_last = %8h", $time, r_id, r_resp, r_last);
 endtask
 task axi_r_wait_last ();
 

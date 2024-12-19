@@ -1,7 +1,7 @@
-module p_strb_decoder (
+module strb_decoder (
     input [3:0] reg_wstrb,
     input [2:0] reg_size,
-    output [3:0] p_strb,
+    output [3:0] strb,
     output reg size_err
 );
     reg [3:0] en_line;
@@ -23,5 +23,5 @@ module p_strb_decoder (
             end
         endcase
     end
-    assign p_strb = reg_wstrb & en_line;
+    assign strb = reg_wstrb & en_line;
 endmodule
