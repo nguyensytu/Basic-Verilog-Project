@@ -12,7 +12,10 @@ module register_file (
                 register_bank[i] <= 32'b0; //reset all registers to 0.
         end
         else if(w_en)
-            register_bank[rd] <= w_data;
+            if(rd == 5'b0)
+                register_bank[rd] <= 32'b0;
+            else
+                register_bank[rd] <= w_data;
     end
     assign r_data1 = register_bank [rs1];
     assign r_data2 = register_bank [rs2];

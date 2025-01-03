@@ -3,8 +3,9 @@
 ### Opcode 
 * 000aaaaa : load addr -> A  
 * 001aaaaa : load addr -> B 
-* 010aaaaa : store A -> addr
-* 011xxxxx : store imm
+* 0100dddd : load imm -> A
+* 0101dddd : load imm -> B
+* 011aaaaa : store A -> addr
 * 100aaaaa : jmp addr -> pc // jump anyway   
 * 101aaaaa : jmpz addr -> pc // jump if zero flag = 1
 * 110xxxxx : return        

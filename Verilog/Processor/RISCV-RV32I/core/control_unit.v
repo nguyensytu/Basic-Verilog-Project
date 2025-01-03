@@ -11,11 +11,13 @@ module control_unit (
 	wire [2:0] funct3;
 	wire [6:0] funct7;
 	//
+	reg illegal_op;
+	//
 	assign opcode = inst[6:0];
 	assign funct3 = inst[14:12];
 	assign funct7 = inst[31:25];
-
 	always @(*) begin
+		illegal_op = 1'b1;
 		ctrl_imm = 1'b0;
 		L = 1'b0;
 		B = 1'b0;
@@ -31,6 +33,7 @@ module control_unit (
 		csr_alu_func = 2'd0;
 		casez (opcode)
 			7'b1100011: begin //BEQ, BNE, BLT, BGE, BLTU, BGEU
+				illegal_op = 1'b0;
 				ctrl_imm = 1'b1;
 				B = 1'b1;
 				ctrl_branch_addr = 1'b1;
@@ -44,16 +47,19 @@ module control_unit (
 				endcase
 			end 
 			7'b0110111: begin //LUI
+				illegal_op = 1'b0;
 				ctrl_imm = 1'b1;
 				wb = 1'b1;
 				alu_func = 4'b1111;
 			end
 			7'b0010111: begin //AUIPC
+				illegal_op = 1'b0;
 				ctrl_imm = 1'b1;
 				wb = 1'b1;
 				ctrl_src1 = 1'b1;
 			end
 			7'b110?111: begin //JAL, JALR
+				illegal_op = 1'b0;
 				ctrl_imm = 1'b1;
 				wb = 1'b1;
 				J = 1'b1;
@@ -64,6 +70,7 @@ module control_unit (
 				alu_func = 4'b1110;
 			end
 			7'b0000011: begin //LB, LH, LW, LBU, LHU
+				illegal_op = 1'b0;
 				ctrl_imm = 1'b1;
 				L = 1'b1;
 				wb = 1'b1;
@@ -76,6 +83,7 @@ module control_unit (
 				endcase
 			end
 			7'b0100011: begin //SB, SH, SW
+				illegal_op = 1'b0;
 				ctrl_imm = 1'b1;
 				wmem = 1'b1;
 				case(funct3)
@@ -85,6 +93,7 @@ module control_unit (
 				endcase
 			end
 			7'b0?10011: begin //ADDI, SLTI, SLTIU, XORI, ORI, ANDI, SLLI, SRLI, SRAI, ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND
+				illegal_op = 1'b0;
 				case (opcode[5])
 					1'b0: ctrl_imm = 1'b1;  
 				endcase
@@ -111,6 +120,7 @@ module control_unit (
 				endcase
 			end
 			7'b1110011: begin //CSRRW, CSRRS, CSRRC, CSRRWI, CSRRSI, CSRRCI
+				illegal_op = 1'b0;
 				w_csr = 1'b1;
 				wb = 1'b1;
 				casez(funct3)
@@ -131,7 +141,7 @@ module control_unit (
 						 | (opcode == 7'b0110011 & (funct7 != 7'd1 & funct7 != 7'd0 & (funct7 != 7'b0100000 & (funct3 != 3'b000 & funct3 != 3'b101))))
 						 | (opcode == 7'b0010011 & (funct7 != 7'd1 & funct7 != 7'd0 & (funct7 != 7'b0100000 & funct3 != 3'b101)))
 						 | (opcode == 7'b1110011 & !(ecall | ebreak | mret) & (funct3 == 3'b100 | funct3 == 3'b000))
-						 ? 1'b1 : 1'b0;
+						 | illegal_op ? 1'b1 : 1'b0;
 	assign ecall  = inst == 32'h0000_0073;
 	assign ebreak = inst == 32'h0010_0073;
 	assign mret   = inst == 32'h3020_0073;
