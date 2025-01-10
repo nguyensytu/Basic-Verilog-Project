@@ -1,8 +1,16 @@
 `include "core_type.sv"
-module core_tb; 
+module core_tb;
+// 
     legal_inst  legal_inst0;
+    legal_lui legal_lui0;
+    legal_auipc legal_auipc0;
     legal_load legal_load0;
     legal_store legal_store0;
+    legal_alu legal_alu0;
+    legal_alu_imm legal_alu_imm0;
+    legal_branch legal_branch0;
+    legal_jal legal_jal0;
+    legal_jalr legal_jalr0;
 // core interface
     reg clk;
     reg reset;
@@ -18,7 +26,7 @@ module core_tb;
     wire [3:0] wmask;
     wire wmem_o;
     wire req_mem;
-    wire [31:0] pc;
+    wire [31:0] pc_o;
     wire [31:0] data_o;
     wire [31:0] addr_o;
     wire irq_ack;
@@ -52,6 +60,10 @@ module core_tb;
             exmem_pc <= 32'b0;
             exmem_inst <= 32'h13;
         end
+        else if(uut.mem_stall) begin
+            exmem_inst <= exmem_inst;
+            exmem_pc <= exmem_pc;
+        end
         else begin
             exmem_pc <= idex_pc;
             exmem_inst <= idex_inst;
@@ -65,21 +77,18 @@ module core_tb;
         end
         else begin
             memwb_pc <= exmem_pc;
-            if(exmem_inst != idex_inst)
-                memwb_inst <= exmem_inst;
-            else    
-                memwb_inst <= 32'h13;
+            memwb_inst <= exmem_inst;
         end
     end
     // 
     always @(posedge clk, posedge reset) begin
         if (reset | uut.mem_flush) begin
-            wb_inst <= 32'h13;
             wb_pc <= 32'b0;
+            wb_inst <= 32'h13;
         end
         else begin
-            wb_inst <= memwb_inst;
             wb_pc <= memwb_pc;
+            wb_inst <= memwb_inst;
         end
     end
 //    
@@ -90,7 +99,7 @@ module core_tb;
         fast_irq,
         wmask,
         wmem_o, req_mem,
-        pc, data_o, addr_o,
+        pc_o, data_o, addr_o,
         irq_ack
     );
 //  
@@ -101,7 +110,7 @@ module core_tb;
                 memory[i] <= i[7:0];
             end
         end
-        else if(wmem_o) begin
+        else if(wmem_o && ~data_stall) begin
             if(wmask[0])
                 memory[addr_o] <= data_o[7:0];
             if(wmask[1])
@@ -121,8 +130,8 @@ module core_tb;
         end
     end
     `include "core_task.sv"
-    `include "wb_check.sv"
-    `include "mem_check.sv"
+    `include "checker/wb_check.sv"
+    `include "checker/ex_check.sv"
     `include "core_testcase.sv"
     `include "core_test.sv"
 endmodule

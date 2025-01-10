@@ -21,7 +21,7 @@ module hazard_detection_unit(
     begin
         if(L_EX)
         begin
-            if((rs1 == rd_EX && uses_rs1) || (rs2 == rd_EX && uses_rs2))
+            if(((rs1 == rd_EX && uses_rs1) || (rs2 == rd_EX && uses_rs2)) && (rd_EX!= 5'b0))
                 hazard_stall = 1'b1;
 
             else

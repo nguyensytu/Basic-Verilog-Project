@@ -34,7 +34,7 @@ module control_unit (
 		casez (opcode)
 			7'b1100011: begin //BEQ, BNE, BLT, BGE, BLTU, BGEU
 				illegal_op = 1'b0;
-				ctrl_imm = 1'b1;
+				// ctrl_imm = 1'b1;
 				B = 1'b1;
 				ctrl_branch_addr = 1'b1;
 				case (funct3)
@@ -60,7 +60,7 @@ module control_unit (
 			end
 			7'b110?111: begin //JAL, JALR
 				illegal_op = 1'b0;
-				ctrl_imm = 1'b1;
+				// ctrl_imm = 1'b1;
 				wb = 1'b1;
 				J = 1'b1;
 				case (opcode[3])
@@ -135,11 +135,11 @@ module control_unit (
 		endcase
 	end
 	assign illegal_instr = (opcode == 7'b1100011 & funct3[2:1] == 2'b01)
-						 | (opcode == 7'b1101011 & funct3 == 3'b0)
-						 | (opcode == 7'b0000011 & (funct3 == 3'b011 | funct3 == 3'b110 | funct3 == 3'b111))
+						 // | (opcode == 7'b1101011 & funct3 == 3'b0)
+						 | (opcode == 7'b0000011 & (funct3 == 3'b011 | funct3 == 3'b110 | funct3 == 3'b111)) 
 						 | (opcode == 7'b0100011 & (funct3 != 3'b000 & funct3 != 3'b001 & funct3 != 3'b010))
-						 | (opcode == 7'b0110011 & (funct7 != 7'd1 & funct7 != 7'd0 & (funct7 != 7'b0100000 & (funct3 != 3'b000 & funct3 != 3'b101))))
-						 | (opcode == 7'b0010011 & (funct7 != 7'd1 & funct7 != 7'd0 & (funct7 != 7'b0100000 & funct3 != 3'b101)))
+						 | (opcode == 7'b0110011 & ~(funct7 == 7'b0 | ((funct3 == 3'b000 | funct3 == 3'b101) & (funct7 == 7'b0100000))))
+						 | (opcode == 7'b0010011 & ((funct3 == 3'b001 & ~(funct7 == 7'b0 | funct7 == 7'b1)) | (funct3 == 3'b101 & ~(funct7 == 7'b0 | funct7 == 7'b1 | funct7 == 7'b0100000 | funct7 == 7'b0100001))))
 						 | (opcode == 7'b1110011 & !(ecall | ebreak | mret) & (funct3 == 3'b100 | funct3 == 3'b000))
 						 | illegal_op ? 1'b1 : 1'b0;
 	assign ecall  = inst == 32'h0000_0073;

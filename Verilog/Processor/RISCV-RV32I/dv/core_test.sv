@@ -1,13 +1,22 @@
 initial begin
+    legal_lui0 = new();
+    legal_auipc0 = new();
     legal_load0 = new();
     legal_store0 = new();
-    reset = 1'b1; 
-    init();
-    #20 reset = 1'b0;
-    @(posedge clk);
+    legal_alu0 = new();
+    legal_alu_imm0 = new();
+    legal_branch0 = new();
+    legal_jal0 = new();
+    legal_jalr0 = new();
     fork
         begin
-            testcase_3();
+            reset = 1'b1; 
+            init();
+            #20 reset = 1'b0;
+        end
+        begin
+            #15
+            testcase();
         end
         begin
             forever begin
@@ -16,7 +25,7 @@ initial begin
         end
         begin
             forever begin
-                mem_check();
+                ex_check();
             end    
         end
     join

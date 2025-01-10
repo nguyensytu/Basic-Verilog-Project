@@ -6,16 +6,17 @@ module core (
     input [15:0] fast_irq, //fast interrupts
     output [3:0] wmask,
     output wmem_o, req_mem, // data memory access request output. driven high when a store/load is carried out
-    output [31:0] pc, data_o, addr_o,
+    output [31:0] pc_o, data_o, addr_o,
     output wire irq_ack
 );
 // Pineline registers declaration
     // IFID pineline registers declaration
+    wire [31:0] pc;
     reg [31:0] ifid_inst, ifid_pc;
     // IDEX pineline registers declaration
     reg [3:0] idex_alu_func;
-    reg idex_L, idex_B, idex_J, idex_w_csr, idex_wmem, idex_wb, idex_mem_sign,
-        idex_mret, idex_ctrl_branch_addr, idex_hazard_stall;
+    reg idex_ctrl_imm, idex_L, idex_B, idex_J, idex_w_csr, idex_wmem, idex_wb, idex_mem_sign,
+        idex_mret, idex_ctrl_branch_addr, idex_ctrl_src1, idex_hazard_stall;
     reg [1:0] idex_mem_len;
     reg [31:0] idex_pc, idex_data1, idex_data2, idex_imm;
     reg [11:0] idex_csr_addr;
@@ -67,7 +68,7 @@ module core (
                 csr_alu_out, ex_result;
     // control
     wire take_branch, inst_addr_misaligned;
-    wire if_stall, id_stall, ex_stall, csr_stall;
+    wire if_stall, id_stall, ex_stall, mem_stall, csr_stall;
 // Intance submodule
     // CSR 
     csr_unit CSR (
@@ -106,7 +107,7 @@ module core (
     );
     // LSU
     load_store_unit LSU (
-        clk, reset, alu_out, exmem_data2, data_i, memwb_memout, 
+        clk, reset, alu_out, exmem_result, exmem_data2, data_i, memwb_memout, 
         idex_mem_len, exmem_mem_len,
         idex_L, idex_wmem, exmem_misaligned,
         data_o, addr_o, wmask, 
@@ -123,18 +124,20 @@ module core (
                        ((ifid_inst[31:20] == idex_csr_addr && idex_w_csr) || 
                         (ifid_inst[31:20] == exmem_csr_addr && exmem_w_csr) ||
                         (ifid_inst[31:20] == memwb_csr_addr && memwb_w_csr));
-    assign ex_stall = data_stall | misaligned_access;
+    assign ex_stall = mem_stall | misaligned_access;
+    assign mem_stall = (exmem_L | exmem_misaligned | exmem_wmem) & data_stall;
     // IF stage 
     assign pc = csr_state ? (~take_branch & mret ? mepc : irq_addr) : // csr_state = 1 ~ irq
                 take_branch ? branch_target_addr : 
                 if_stall ? if_pc : if_pc + 32'h4;
+    assign pc_o = if_pc;
     // EX stage
     // ALU signal
-    assign src1 = ctrl_src1 ? idex_pc : ex_data1;
+    assign src1 = idex_ctrl_src1 ? idex_pc : ex_data1; 
     assign ex_data1 = forward_mem_ctrl_src1 ? exmem_result :
                       forward_wb_ctrl_src1 ? reg_write_data : // memwb_result :
                       idex_data1;
-    assign src2 = ctrl_imm ? idex_imm : ex_data2;
+    assign src2 = idex_ctrl_imm ? idex_imm : ex_data2;
     assign ex_data2 = forward_mem_ctrl_src2 ? exmem_result :
                       forward_wb_ctrl_src2 ? reg_write_data : //memwb_result :
                       idex_data2;
@@ -200,6 +203,7 @@ module core (
     always @(posedge clk, posedge reset) begin
         if(reset | take_branch | id_flush) begin
             idex_alu_func <= 4'h0;
+            idex_ctrl_imm <= 1'b1;
             idex_L <= 1'b0;
             idex_B <= 1'b0;
             idex_J <= 1'b0;
@@ -209,6 +213,7 @@ module core (
             idex_mem_sign <= 1'b0;
             idex_mret <= 1'b0;
             idex_ctrl_branch_addr <= 1'b0;
+            idex_ctrl_src1 <= 1'b0;
             idex_hazard_stall <= 1'b0;
             idex_mem_len <= 2'b0;
             idex_pc <= 32'b0;
@@ -222,6 +227,7 @@ module core (
         end
         else if (ex_stall) begin
             idex_alu_func <= idex_alu_func;
+            idex_ctrl_imm <= idex_ctrl_imm;
             idex_L <= idex_L;
             idex_B <= idex_B;
             idex_J <= idex_J;
@@ -231,6 +237,7 @@ module core (
             idex_mem_sign <= idex_mem_sign;
             idex_mret <= idex_mret;
             idex_ctrl_branch_addr <= idex_ctrl_branch_addr;
+            idex_ctrl_src1 <= idex_ctrl_src1;
             idex_hazard_stall <= idex_hazard_stall;
             idex_mem_len <= idex_mem_len;
             idex_pc <= idex_pc;
@@ -244,6 +251,7 @@ module core (
         end
         else begin
             idex_alu_func <= alu_func;
+            idex_ctrl_imm <= ctrl_imm;
             idex_L <= L;
             idex_B <= B;
             idex_J <= J;
@@ -253,6 +261,7 @@ module core (
             idex_mem_sign <= mem_sign;
             idex_mret <= mret;
             idex_ctrl_branch_addr <= ctrl_branch_addr;
+            idex_ctrl_src1 <= ctrl_src1;
             idex_hazard_stall <= hazard_stall;
             idex_mem_len <= mem_len;
             idex_pc <= ifid_pc;
@@ -282,11 +291,11 @@ module core (
             exmem_csr_addr <= 12'b0;
             exmem_rd <= 5'h0;
         end
-        else if (data_stall) begin
+        else if (mem_stall) begin
             exmem_L <= exmem_L;
             exmem_w_csr <= exmem_w_csr;
             exmem_wmem <= exmem_wmem;
-            exmem_wb <= 1'b0;
+            exmem_wb <= exmem_wb;
             exmem_mem_sign <= exmem_mem_sign;
             exmem_mret <= exmem_mret;
             exmem_misaligned <= exmem_misaligned;
@@ -337,16 +346,21 @@ module core (
         else begin
             memwb_L <= exmem_L;
             memwb_w_csr <= exmem_w_csr;
-            memwb_wb <= exmem_wb;
+            if(mem_stall)
+                memwb_wb <= 1'b0;
+            else
+                memwb_wb <= exmem_wb;
             memwb_mem_sign <= exmem_mem_sign;
             memwb_mret <= exmem_mret;
             memwb_mem_len <= exmem_mem_len;
             memwb_result <= exmem_result;
             memwb_csr <= exmem_csr;
-            memwb_memout <= memout;
+            if(mem_stall)
+                memwb_memout <= memwb_memout;
+            else
+                memwb_memout <= memout;
             memwb_csr_addr <= exmem_csr_addr;
             memwb_rd <= exmem_rd;
         end
     end
-    //
 endmodule

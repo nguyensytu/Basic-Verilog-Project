@@ -1,7 +1,7 @@
 module load_store_unit (
     // 
     input clk, reset,
-    input [31:0] addr_i, data_write_mem, data_read_mem, memwb_memout,
+    input [31:0] addr_i, addr_reg, data_write_mem, data_read_mem, memwb_memout,
     input [1:0] idex_mem_len, exmem_mem_len,
     input idex_L, idex_wmem,
     input exmem_misaligned,
@@ -13,7 +13,6 @@ module load_store_unit (
     output reg [31:0] memout
 );
     wire addr_misaligned;
-    reg [31:0] addr_reg;
 // EX stage
     // see if the load/store address is misaligned and 
     // thus requires two seperate load/store operations
@@ -24,15 +23,6 @@ module load_store_unit (
     assign misaligned_access = (idex_L | idex_wmem) & ~exmem_misaligned & addr_misaligned; //the instruction must be a load or a store, and the address must be misaligned.
     //output to memory
     assign addr_o = exmem_misaligned ? {addr_reg[31:2],2'b0} + 32'd4 : {addr_reg[31:2],2'b0};
-
-    always @(posedge clk or posedge reset) begin
-        if(reset) begin
-            addr_reg <= 32'd0;
-        end
-        else begin
-            addr_reg <= addr_i;
-        end	
-    end
     // MEM stage
     always @(*) begin
         if(!exmem_misaligned) begin
