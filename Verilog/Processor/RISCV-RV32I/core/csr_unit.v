@@ -30,22 +30,27 @@ module csr_unit (
     reg [4:0] fast_irq_index;
     //Priority Encoder Valid output
     reg PE_valid;
-
+    //
     wire pending_irq, pending_exception;
     wire [31:0] masked_irq;
-    //
-    assign direct_mode_addr = mtvec;
-    assign vector_mode_addr = mcause[31] ? {mtvec[31:1],1'b0} + (mcause << 2) : {mtvec[31:1],1'b0};
-    assign irq_addr = mtvec[0] ? vector_mode_addr : direct_mode_addr;
-
-    assign masked_irq = mie & mip & {32{`mstatus_mie}};
+    
+    // exception
     assign pending_exception = (illegal_instr | inst_addr_misaligned | ecall | ebreak) & ~take_branch;
+
+    // interrupt
+    assign masked_irq = mie & mip & {32{`mstatus_mie}};
     assign pending_irq = masked_irq != 32'b0;
 
+    // flush
     assign if_flush = pending_irq | (state == 1'b1) | (id_mret & ~take_branch);
     assign id_flush = ex_flush | pending_irq | pending_exception;
     assign ex_flush = mem_flush | (pending_irq & idex_misaligned) | inst_addr_misaligned;
     assign mem_flush = (pending_irq & wmem) | inst_access_fault;
+
+    // irq_addr decode
+    assign direct_mode_addr = mtvec;
+    assign vector_mode_addr = mcause[31] ? {mtvec[31:1],1'b0} + (mcause << 2) : {mtvec[31:1],1'b0};
+    assign irq_addr = mtvec[0] ? vector_mode_addr : direct_mode_addr;
     // mcause write in WB stage
     always @(posedge clk, posedge reset) begin
         if (reset) begin

@@ -17,6 +17,7 @@ module core (
     reg [3:0] idex_alu_func;
     reg idex_ctrl_imm, idex_L, idex_B, idex_J, idex_w_csr, idex_wmem, idex_wb, idex_mem_sign,
         idex_mret, idex_ctrl_branch_addr, idex_ctrl_src1, idex_hazard_stall;
+    reg [1:0] idex_csr_alu_func;
     reg [1:0] idex_mem_len;
     reg [31:0] idex_pc, idex_data1, idex_data2, idex_imm;
     reg [11:0] idex_csr_addr;
@@ -36,7 +37,7 @@ module core (
 // Signal declaration
     // csr
     wire [31:0] csr_reg_o, irq_addr, mepc;
-    wire if_flush, id_flush, ex_flush, mem_flush;
+    wire pending_irq, pending_exception;
     wire csr_state;
     // hazard signal declaration
     wire hazard_stall;
@@ -68,16 +69,30 @@ module core (
                 csr_alu_out, ex_result;
     // control
     wire take_branch, inst_addr_misaligned;
-    wire if_stall, id_stall, ex_stall, mem_stall, csr_stall;
+    wire if_stall, id_stall, ex_stall, mem_stall, csr_stall_ex, csr_stall_mem;
+    wire if_flush, id_flush, ex_flush, mem_flush;
 // Intance submodule
     // CSR 
-    csr_unit CSR (
-        clk, reset, meip, mtip, msip, inst_access_fault, data_err, fast_irq, 
-        memwb_w_csr, exmem_wmem, idex_mret, memwb_mret, 
-        illegal_instr, ecall, ebreak, take_branch, exmem_misaligned, inst_addr_misaligned,
-        pc, memwb_csr, ifid_inst[31:20], memwb_csr_addr, 
-        csr_reg_o, irq_addr, mepc, csr_state, irq_ack,
-        if_flush, id_flush, ex_flush, mem_flush
+    csrs_controller CSR (
+        clk, reset, 
+        meip, mtip, msip, 
+        fast_irq,
+        inst_access_fault, data_err,
+        pc_o, // if
+        illegal_instr, ecall, ebreak, // id
+        idex_csr_addr, // ex 
+        take_branch, inst_addr_misaligned, // ex
+        exmem_wmem, // mem
+        memwb_csr_addr, // wb
+        memwb_csr, // wb
+        memwb_w_csr, // wb
+        memwb_mret, // wb
+        csr_reg_o,  // ex
+        mepc, 
+        pending_irq, 
+        irq_addr,
+        irq_ack, // outside
+        csr_state
     );
     // HDU
     hazard_detection_unit HDU (
@@ -119,15 +134,19 @@ module core (
     // assign req_mem = exmem_L | idex_wmem; //driven high if there's a load or a store.
     // stall
     assign if_stall = id_stall; 
-    assign id_stall = ex_stall | hazard_stall | csr_stall;
-    assign csr_stall = w_csr && 
-                       ((ifid_inst[31:20] == idex_csr_addr && idex_w_csr) || 
-                        (ifid_inst[31:20] == exmem_csr_addr && exmem_w_csr) ||
-                        (ifid_inst[31:20] == memwb_csr_addr && memwb_w_csr));
-    assign ex_stall = mem_stall | misaligned_access;
-    assign mem_stall = (exmem_L | exmem_misaligned | exmem_wmem) & data_stall;
+    assign id_stall = ex_stall | hazard_stall; // | csr_stall;
+    assign csr_stall_ex = idex_w_csr & (idex_csr_addr == exmem_csr_addr && exmem_w_csr);
+    assign csr_stall_mem = idex_w_csr & (idex_csr_addr == memwb_csr_addr && memwb_w_csr);
+    assign ex_stall = mem_stall | misaligned_access | csr_stall_ex;
+    assign mem_stall = ((exmem_L | exmem_misaligned | exmem_wmem) & data_stall) | csr_stall_mem;
+    // flush
+    assign if_flush = id_flush | csr_state | (mret & ~take_branch);
+    assign id_flush = ex_flush | pending_irq | illegal_instr | ecall | ebreak;
+    assign ex_flush = mem_flush | inst_addr_misaligned;
+    assign mem_flush = data_err ;
     // IF stage 
-    assign pc = csr_state ? (~take_branch & mret ? mepc : irq_addr) : // csr_state = 1 ~ irq
+    assign pc = csr_state ? irq_addr : // csr_state = 1 ~ irq
+                (~take_branch & mret) ? mepc :
                 take_branch ? branch_target_addr : 
                 if_stall ? if_pc : if_pc + 32'h4;
     assign pc_o = if_pc;
@@ -152,9 +171,9 @@ module core (
     // In system inst, csr_reg_o value will be assigned to register file in WB stage 
     // but the csr_alu_out value will be assigned back to CSRs in WB stage
     assign ex_result = idex_w_csr ? csr_reg_o : alu_out; 
-    assign csr_alu_out = csr_alu_func == 2'd2 ? csr_reg_o & ~(ctrl_imm ? idex_imm : ex_data1) 
-                   : csr_alu_func == 2'd1 ? csr_reg_o | (ctrl_imm ? idex_imm : ex_data1)
-                   : (ctrl_imm ? idex_imm : ex_data1);
+    assign csr_alu_out = idex_csr_alu_func == 2'd2 ? (csr_reg_o & ~(ctrl_imm ? idex_imm : ex_data1)) :
+                         idex_csr_alu_func == 2'd1 ? (csr_reg_o | (ctrl_imm ? idex_imm : ex_data1)) :
+                         (ctrl_imm ? idex_imm : ex_data1);
     // MEM stage
     // WB stage
     always @(*) begin
@@ -186,7 +205,7 @@ module core (
     end
     // IFID
     always @(posedge clk, posedge reset) begin
-        if (reset | take_branch | if_flush) begin
+        if (reset || take_branch || if_flush) begin
             ifid_inst <= 32'h13; // nop instruction addi x0,x0,0
             ifid_pc <= 32'h0;
         end
@@ -201,8 +220,9 @@ module core (
     end
     // IDEX
     always @(posedge clk, posedge reset) begin
-        if(reset | take_branch | id_flush) begin
+        if(reset || take_branch || id_flush) begin
             idex_alu_func <= 4'h0;
+            idex_csr_alu_func <= 2'b0;
             idex_ctrl_imm <= 1'b1;
             idex_L <= 1'b0;
             idex_B <= 1'b0;
@@ -227,6 +247,7 @@ module core (
         end
         else if (ex_stall) begin
             idex_alu_func <= idex_alu_func;
+            idex_csr_alu_func <= idex_csr_alu_func;
             idex_ctrl_imm <= idex_ctrl_imm;
             idex_L <= idex_L;
             idex_B <= idex_B;
@@ -251,6 +272,7 @@ module core (
         end
         else begin
             idex_alu_func <= alu_func;
+            idex_csr_alu_func <= csr_alu_func;
             idex_ctrl_imm <= ctrl_imm;
             idex_L <= L;
             idex_B <= B;
@@ -276,7 +298,7 @@ module core (
     end 
     // EXMEM
     always @(posedge clk, posedge reset) begin
-        if (reset | ex_flush) begin
+        if (reset || ex_flush || csr_stall_ex) begin
             exmem_L <= 1'b0;
             exmem_w_csr <= 1'b0;
             exmem_wmem <= 1'b0;
@@ -291,7 +313,7 @@ module core (
             exmem_csr_addr <= 12'b0;
             exmem_rd <= 5'h0;
         end
-        else if (mem_stall) begin
+        else if (mem_stall || csr_stall_mem) begin
             exmem_L <= exmem_L;
             exmem_w_csr <= exmem_w_csr;
             exmem_wmem <= exmem_wmem;
@@ -330,7 +352,7 @@ module core (
     end   
     // MEMWB
     always @(posedge clk, posedge reset) begin
-        if (reset | mem_flush) begin
+        if (reset || mem_flush || csr_stall_mem) begin
             memwb_L <= 1'b0;
             memwb_w_csr <= 1'b0;
             memwb_wb <= 1'b0;

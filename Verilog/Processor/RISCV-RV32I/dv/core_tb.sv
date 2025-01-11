@@ -11,6 +11,7 @@ module core_tb;
     legal_branch legal_branch0;
     legal_jal legal_jal0;
     legal_jalr legal_jalr0;
+    legal_csr legal_csr0;
 // core interface
     reg clk;
     reg reset;
@@ -56,11 +57,11 @@ module core_tb;
     end
     // MEM
     always @(posedge clk, posedge reset) begin
-        if (reset | uut.ex_flush) begin
+        if (reset || uut.ex_flush || uut.csr_stall_ex) begin
             exmem_pc <= 32'b0;
             exmem_inst <= 32'h13;
         end
-        else if(uut.mem_stall) begin
+        else if(uut.mem_stall || uut.csr_stall_mem) begin
             exmem_inst <= exmem_inst;
             exmem_pc <= exmem_pc;
         end
@@ -71,7 +72,7 @@ module core_tb;
     end
     // WB
     always @(posedge clk, posedge reset) begin
-        if (reset | uut.mem_flush) begin
+        if (reset | uut.mem_flush | uut.csr_stall_mem) begin
             memwb_pc <= 32'b0;
             memwb_inst <= 32'h13;
         end

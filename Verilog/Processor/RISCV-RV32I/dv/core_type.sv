@@ -41,6 +41,19 @@ typedef enum logic[9:0] {add    = 10'b0000000000,
                         sra     = 10'b0100000101,
                         orj     = 10'b0000000110,
                         andj    = 10'b0000000111} legal_alu_funct;
+typedef enum logic[2:0] {csrrw    = 3'b001,
+                        csrrs     = 3'b010,
+                        csrrc     = 3'b011,
+                        csrrwi    = 3'b101,
+                        csrrsi    = 3'b110,
+                        csrrci    = 3'b111} legal_csrr_funct3;
+typedef enum logic [31:0] {ecall  = 32'h00000073, 
+                           ebreak = 32'h00100073,
+                           uret   = 32'h00200073,
+                           sret   = 32'h10200073,
+                           mret   = 32'h30200073,
+                           wfi    = 32'h20500073,
+                           fence_i= 32'h00001073} legal_system_call;
 function string opcode_to_string(logic [6:0] opcode);
     case (opcode)
         branch:  opcode_to_string = "branch";
@@ -149,6 +162,7 @@ class legal_load extends legal_inst;
     rand logic [9:0] offset_upper;
     logic [1:0] offset_lowwer;
     logic [11:0] offset;
+    randc logic [4:0] rd;
     randc logic [4:0] legal_cases;
     constraint funct3_load {legal_cases[4:2] inside {3'b000, 3'b001, 3'b010, 3'b100, 3'b101};};
     function void post_randomize();
@@ -233,5 +247,24 @@ class legal_jalr extends legal_inst;
         funct3 = 3'b000;
         opcode = jalr;
         inst = {offset, rs1, funct3, rd, opcode};
+    endfunction
+endclass 
+
+class legal_csr extends legal_inst;
+    rand logic [11:0] imm;
+    randc logic [2:0] legal_cases;
+    constraint funct3_csr {legal_cases inside {3'b000, 3'b001, 3'b010, 3'b011, 3'b101, 3'b110, 3'b111};};
+    constraint imm_csr {if(legal_cases == 3'b000) { imm[11:5] inside {7'b0000000, 7'b0011000};}
+                        if(legal_cases == 3'b001 || legal_cases == 3'b010 || legal_cases == 3'b011 ||
+                            legal_cases == 3'b101 || legal_cases == 3'b110 || legal_cases == 3'b111 ) 
+                        {imm inside {12'h300, 12'h304, 12'h305, 12'h340, 12'h341, 12'h342, 13'h344};}};
+    constraint rs_csr { if(legal_cases == 3'b000 && imm[11:5] == 7'b0) {imm[4:0] inside {5'b0, 5'b1}; rs1 == 5'b0; rd == 5'b0;} // ecall (rs2 = 5'b0), ebreak (rs2 = 5'b1), uret (rs2 = 5'b10)
+                        // if(legal_cases == 3'b000 && imm[11:5] == 7'b0001000){imm[4:0] inside {5'b10, 5'b101}; rs1 == 5'b0; rd == 5'b0;} // sret, wfi
+                        if(legal_cases == 3'b000 && imm[11:5] == 7'b0011000){imm[4:0] inside {5'b10}; rs1 == 5'b0; rd == 5'b0;} // mret
+                      };
+    function void post_randomize();
+        funct3 = legal_cases;
+        opcode = csr;
+        inst = {imm, rs1, funct3, rd, opcode};
     endfunction
 endclass 

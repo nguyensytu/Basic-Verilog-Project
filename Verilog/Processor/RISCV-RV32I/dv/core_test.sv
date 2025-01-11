@@ -8,6 +8,7 @@ initial begin
     legal_branch0 = new();
     legal_jal0 = new();
     legal_jalr0 = new();
+    legal_csr0 = new();
     fork
         begin
             reset = 1'b1; 

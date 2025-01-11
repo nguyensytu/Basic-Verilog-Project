@@ -124,6 +124,10 @@ module control_unit (
 				w_csr = 1'b1;
 				wb = 1'b1;
 				casez(funct3)
+					3'b000: begin
+						// w_csr = 1'b0;
+						wb = 1'b0;
+					end
 					3'b?01: csr_alu_func = 2'd0; //RW,RWI
 					3'b?10: csr_alu_func = 2'd1; //RS,RSI
 					3'b?11: csr_alu_func = 2'd2; //RC,RCI
