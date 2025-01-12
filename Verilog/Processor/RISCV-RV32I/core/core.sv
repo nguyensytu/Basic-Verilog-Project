@@ -140,8 +140,9 @@ module core (
     assign ex_stall = mem_stall | misaligned_access | csr_stall_ex;
     assign mem_stall = ((exmem_L | exmem_misaligned | exmem_wmem) & data_stall) | csr_stall_mem;
     // flush
-    assign if_flush = id_flush | csr_state | (mret & ~take_branch);
-    assign id_flush = ex_flush | pending_irq | illegal_instr | ecall | ebreak;
+    assign if_flush = id_flush | pending_irq | csr_state | (mret & ~take_branch);
+    assign id_flush = ex_flush | illegal_instr | ecall | ebreak;
+    // assign id_flush = ex_flush | pending_irq | illegal_instr | ecall | ebreak;
     assign ex_flush = mem_flush | inst_addr_misaligned;
     assign mem_flush = data_err ;
     // IF stage 
@@ -171,9 +172,9 @@ module core (
     // In system inst, csr_reg_o value will be assigned to register file in WB stage 
     // but the csr_alu_out value will be assigned back to CSRs in WB stage
     assign ex_result = idex_w_csr ? csr_reg_o : alu_out; 
-    assign csr_alu_out = idex_csr_alu_func == 2'd2 ? (csr_reg_o & ~(ctrl_imm ? idex_imm : ex_data1)) :
-                         idex_csr_alu_func == 2'd1 ? (csr_reg_o | (ctrl_imm ? idex_imm : ex_data1)) :
-                         (ctrl_imm ? idex_imm : ex_data1);
+    assign csr_alu_out = idex_csr_alu_func == 2'd2 ? (csr_reg_o & ~(idex_ctrl_imm ? idex_imm : ex_data1)) :
+                         idex_csr_alu_func == 2'd1 ? (csr_reg_o | (idex_ctrl_imm ? idex_imm : ex_data1)) :
+                         (idex_ctrl_imm ? idex_imm : ex_data1);
     // MEM stage
     // WB stage
     always @(*) begin

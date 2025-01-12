@@ -118,7 +118,7 @@ module csrs_controller (
                             (data_err & !wmem) ? 32'h5 : mcause;
     assign mtvec_next = (w_csr & w_addr == 12'h305) ? csr_reg_i : mtvec;
     assign mscratch_next = (w_csr & w_addr == 12'h340) ? csr_reg_i : mscratch;
-    assign mepc_next =  (state_next) ? pc :
+    assign mepc_next =  (state_next) ? pc : // can drive to store another return address (for example (pc - 32'h4) if data_err happen) 
                         (w_csr & w_addr == 12'h341) ? csr_reg_i : mepc;
 // mip
     //Priority Encoder for fast interrupts.
