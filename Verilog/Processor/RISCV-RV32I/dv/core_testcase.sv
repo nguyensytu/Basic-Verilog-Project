@@ -57,6 +57,20 @@
 //     join
 // endtask
 
+task testcase(); // inst stall
+    int i;
+    for(i=0; i<16; i = i+1) begin
+        legal_load0.randomize() with {offset_upper[9] == 1'b0; rs1 == 5'b0;};
+        write_inst(inst, legal_load0.inst);    
+    end
+    inst_stall = 1'b1; #11
+    inst_stall = 1'b0;
+    forever begin
+        legal_alu0.randomize();
+        write_inst(inst, legal_alu0.inst);  
+    end
+endtask
+
 // task testcase(); // alu
 //     int i;
 //     for(i=0; i<32; i = i+1) begin
@@ -201,33 +215,33 @@
 //     end
 // endtask
 
-task testcase(); // inst_access_fault
-    int i, j;
-    for(i=0; i<16; i = i+1) begin
-        legal_load0.randomize() with {offset_upper[9] == 1'b0; rs1 == 5'b0;};
-        write_inst(inst, legal_load0.inst);   
-    end
-    legal_csr0.randomize() with {legal_cases == 3'b001; imm == 12'h341; rs1 <= 5'hf;};
-    write_inst(inst, legal_csr0.inst); 
-    legal_store0.randomize() with{offset_upper[9] == 1'b0; rs1 == 5'b0;};
-    write_inst(inst, legal_store0.inst); 
-    legal_store0.randomize() with{offset_upper[9] == 1'b0; rs1 == 5'b0;};
-    write_inst(inst, legal_store0.inst); 
-    legal_store0.randomize() with{offset_upper[9] == 1'b0; rs1 == 5'b0;};
-    write_inst(inst, legal_store0.inst);
-    // legal_csr0.randomize() with {legal_cases != 3'b000;};
-    inst_access_fault = 1'b1; #11
-    inst_access_fault = 1'b0;
-    for(j=0; j<9; j = j+1) begin
-        legal_store0.randomize() with{offset_upper[9] == 1'b0; rs1 == 5'b0;};
-        write_inst(inst, legal_store0.inst);  
-    end
-    write_inst(inst, mret); 
-    forever begin
-        legal_store0.randomize() with{offset_upper[9] == 1'b0; rs1 == 5'b0;};
-        write_inst(inst, legal_store0.inst);    
-    end
-endtask
+// task testcase(); // inst_access_fault
+//     int i, j;
+//     for(i=0; i<16; i = i+1) begin
+//         legal_load0.randomize() with {offset_upper[9] == 1'b0; rs1 == 5'b0;};
+//         write_inst(inst, legal_load0.inst);   
+//     end
+//     legal_csr0.randomize() with {legal_cases == 3'b001; imm == 12'h341; rs1 <= 5'hf;};
+//     write_inst(inst, legal_csr0.inst); 
+//     legal_store0.randomize() with{offset_upper[9] == 1'b0; rs1 == 5'b0;};
+//     write_inst(inst, legal_store0.inst); 
+//     legal_store0.randomize() with{offset_upper[9] == 1'b0; rs1 == 5'b0;};
+//     write_inst(inst, legal_store0.inst); 
+//     legal_store0.randomize() with{offset_upper[9] == 1'b0; rs1 == 5'b0;};
+//     write_inst(inst, legal_store0.inst);
+//     // legal_csr0.randomize() with {legal_cases != 3'b000;};
+//     inst_access_fault = 1'b1; #11
+//     inst_access_fault = 1'b0;
+//     for(j=0; j<9; j = j+1) begin
+//         legal_store0.randomize() with{offset_upper[9] == 1'b0; rs1 == 5'b0;};
+//         write_inst(inst, legal_store0.inst);  
+//     end
+//     write_inst(inst, mret); 
+//     forever begin
+//         legal_store0.randomize() with{offset_upper[9] == 1'b0; rs1 == 5'b0;};
+//         write_inst(inst, legal_store0.inst);    
+//     end
+// endtask
 
 // task testcase(); // miep, mtip, msip, fast_irq  
 //     int i, j;

@@ -19,6 +19,7 @@ module core_tb;
     reg mtip;
     reg msip;
     reg inst_access_fault;
+    reg inst_stall;
     reg data_err;
     reg data_stall; 
     reg [31:0] inst;
@@ -95,7 +96,7 @@ module core_tb;
 //    
     core uut (
         clk, reset, meip, mtip, msip,
-        inst_access_fault, data_err, data_stall,
+        inst_access_fault, inst_stall, data_err, data_stall,
         inst, data_i,
         fast_irq,
         wmask,

@@ -2,6 +2,7 @@ task init();
     meip = 1'b0;
     mtip = 1'b0;
     msip = 0;
+    inst_stall = 1'b0;
     inst_access_fault = 1'b0;
     data_err = 1'b0;
     data_stall = 1'b0;

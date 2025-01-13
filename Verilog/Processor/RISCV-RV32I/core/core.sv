@@ -1,6 +1,7 @@
 module core (
     input clk, reset, meip, mtip, msip,
     input inst_access_fault, //instruction access fault exception signal
+    input inst_stall,
     input data_err, data_stall,
     input [31:0] inst, data_i,
     input [15:0] fast_irq, //fast interrupts
@@ -133,7 +134,7 @@ module core (
     assign req_mem = idex_L | idex_wmem; // follow the source code
     // assign req_mem = exmem_L | idex_wmem; //driven high if there's a load or a store.
     // stall
-    assign if_stall = id_stall; 
+    assign if_stall = id_stall | inst_stall; 
     assign id_stall = ex_stall | hazard_stall; // | csr_stall;
     assign csr_stall_ex = idex_w_csr & (idex_csr_addr == exmem_csr_addr && exmem_w_csr);
     assign csr_stall_mem = idex_w_csr & (idex_csr_addr == memwb_csr_addr && memwb_w_csr);
@@ -206,7 +207,7 @@ module core (
     end
     // IFID
     always @(posedge clk, posedge reset) begin
-        if (reset || take_branch || if_flush) begin
+        if (reset || take_branch || if_flush || inst_stall) begin
             ifid_inst <= 32'h13; // nop instruction addi x0,x0,0
             ifid_pc <= 32'h0;
         end
