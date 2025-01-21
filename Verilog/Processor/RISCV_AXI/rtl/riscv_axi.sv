@@ -49,6 +49,7 @@ module riscv_axi (
     wire clk;
     wire reset;
     reg inst_access_fault;
+    reg inst_stall;
     reg data_err;
     reg data_stall; 
     wire [31:0] inst;
@@ -83,9 +84,11 @@ module riscv_axi (
 // core signals 
     assign clk = a_clk;
     assign reset = ~a_resetn;
-    assign inst_access_fault = (r_id[3] & ((r_resp != 2'b0) | ~r_valid)) | ~r_id;
+    assign inst_access_fault = (r_id[3] & (r_resp != 2'b0));
+    assign inst_stall = (ar_id[3] & ~ar_ready) | ~ar_id[3] | (r_id[3] & ~r_valid) | ~r_id[3];
     assign data_err = ~b_id[3] & (b_resp != 2'b0);
-    assign data_stall = (~aw_id[3] & ~aw_ready) | aw_id[3] | (~w_id[3] & ~w_ready) | w_id[3] | (~b_id[3] & ~b_valid) | b_id[3] | (~ar_id[3] & ar_valid) | ar_id[3] | (~r_id[3] & r_valid) | r_id[3];
+    assign data_stall = (~aw_id[3] & ~aw_ready) | aw_id[3] | (~w_id[3] & ~w_ready) | w_id[3] | (~b_id[3] & ~b_valid) | b_id[3] | 
+                        (~ar_id[3] & ar_valid) | ar_id[3] | (~r_id[3] & r_valid) | r_id[3];
     assign inst = r_id[3] & r_data;
     assign data_i = ~r_id[3] & r_data;
     // assign wmask = w_strb;

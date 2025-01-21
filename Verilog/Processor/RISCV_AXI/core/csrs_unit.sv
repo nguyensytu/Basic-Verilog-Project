@@ -92,7 +92,7 @@ module csrs_controller (
     end
     assign state_next = (state) ? 1'b0 :
                         ((masked_irq[31:16] != 16'b0) | 
-                        (`mstatus_mie & ((`mie_meie & `mip_meip) | (`mie_mtie & `mip_mtip) | (`mie_msie & `mip_msip))) | 
+                        (`mstatus_mie & ((`mie_meie & `mip_meip) | (`mie_msie & `mip_msip) | (`mie_mtie & `mip_mtip))) | 
                         inst_access_fault | 
                         ((!take_branch) & (inst_addr_misaligned | illegal_instr | ecall | ebreak)) |
                         data_err) ? 1'b1 : 1'b0;  
