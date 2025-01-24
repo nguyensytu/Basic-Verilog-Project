@@ -79,7 +79,7 @@ module core (
         meip, mtip, msip, 
         fast_irq,
         inst_access_fault, data_err,
-        pc_o, // if
+        if_pc, // if
         illegal_instr, ecall, ebreak, // id
         idex_csr_addr, // ex 
         take_branch, inst_addr_misaligned, // ex
@@ -134,7 +134,7 @@ module core (
     assign req_mem = idex_L | idex_wmem; // follow the source code
     // assign req_mem = exmem_L | idex_wmem; //driven high if there's a load or a store.
     // stall
-    assign if_stall = id_stall | inst_stall; 
+    assign if_stall = id_stall; 
     assign id_stall = ex_stall | hazard_stall; // | csr_stall;
     assign csr_stall_ex = idex_w_csr & (idex_csr_addr == exmem_csr_addr && exmem_w_csr);
     assign csr_stall_mem = idex_w_csr & (idex_csr_addr == memwb_csr_addr && memwb_w_csr);
@@ -151,7 +151,7 @@ module core (
                 (~take_branch & mret) ? mepc :
                 take_branch ? branch_target_addr : 
                 if_stall ? if_pc : if_pc + 32'h4;
-    assign pc_o = if_pc;
+    assign pc_o = pc; //if_pc;
     // EX stage
     // ALU signal
     assign src1 = idex_ctrl_src1 ? idex_pc : ex_data1; 
@@ -202,18 +202,22 @@ module core (
     always @(posedge clk, posedge reset) begin
         if(reset)
             if_pc <= 32'b0;
-        else 
+        else if(~inst_stall) 
             if_pc <= pc;
     end
     // IFID
     always @(posedge clk, posedge reset) begin
-        if (reset || take_branch || if_flush || inst_stall) begin
+        if (reset || take_branch || if_flush) begin
             ifid_inst <= 32'h13; // nop instruction addi x0,x0,0
             ifid_pc <= 32'h0;
         end
         else if (id_stall) begin
             ifid_inst <= ifid_inst; 
             ifid_pc <= ifid_pc;                
+        end
+        else if (inst_stall) begin
+            ifid_inst <= 32'h13; // nop instruction addi x0,x0,0
+            ifid_pc <= 32'h0;
         end
         else begin
             ifid_inst <= inst;

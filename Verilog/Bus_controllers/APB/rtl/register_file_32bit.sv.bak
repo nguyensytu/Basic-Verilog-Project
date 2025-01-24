@@ -30,5 +30,5 @@ module register_file_32bit #(
     end
 
     // Register read
-    assign data_out = {regs[offset + 2'b11], regs[offset + 2'b10], regs[offset + 2'b01], regs[offset]};
+    assign data_out = {regs[offset + 2'b11], regs[offset + 2'b01], regs[offset + 2'b10], regs[offset]};
 endmodule

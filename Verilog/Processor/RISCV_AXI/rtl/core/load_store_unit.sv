@@ -7,7 +7,7 @@ module load_store_unit (
     input exmem_misaligned,
 
     output reg [31:0] data_o,
-    output [31:0] addr_o,
+    output [31:0] addr_o, // mem
     output reg [3:0] wmask,
     output misaligned_access,
     output reg [31:0] memout
