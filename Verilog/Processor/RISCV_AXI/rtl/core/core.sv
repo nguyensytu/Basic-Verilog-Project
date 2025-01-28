@@ -6,7 +6,9 @@ module core (
     input [31:0] inst, data_i,
     input [15:0] fast_irq, //fast interrupts
     output [3:0] wmask,
-    output wmem_o, req_mem, // data memory access request output. driven high when a store/load is carried out
+    output wmem_o, rmem_o, // data memory access request output. driven high when a store/load is carried out
+    output misaligned_o,
+    output if_stall_o,
     output [31:0] pc_o, data_o, addr_o,
     output wire irq_ack
 );
@@ -131,8 +133,9 @@ module core (
     );
 // Others signal
     assign wmem_o = exmem_wmem;
-    assign req_mem = idex_L | idex_wmem; // follow the source code
-    // assign req_mem = exmem_L | idex_wmem; //driven high if there's a load or a store.
+    assign rmem_o = exmem_L;
+    assign misaligned_o = exmem_misaligned;
+    assign if_stall_o = if_stall;
     // stall
     assign if_stall = id_stall; 
     assign id_stall = ex_stall | hazard_stall; // | csr_stall;
@@ -151,7 +154,7 @@ module core (
                 (~take_branch & mret) ? mepc :
                 take_branch ? branch_target_addr : 
                 if_stall ? if_pc : if_pc + 32'h4;
-    assign pc_o = pc; //if_pc;
+    assign pc_o = if_pc; //if_pc;
     // EX stage
     // ALU signal
     assign src1 = idex_ctrl_src1 ? idex_pc : ex_data1; 
@@ -202,7 +205,9 @@ module core (
     always @(posedge clk, posedge reset) begin
         if(reset)
             if_pc <= 32'b0;
-        else if(~inst_stall) 
+        else if(inst_stall || if_stall) 
+            if_pc <= if_pc;
+        else
             if_pc <= pc;
     end
     // IFID
